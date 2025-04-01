@@ -1,0 +1,7 @@
+import 'dart:js' as js;
+
+void loadGoogleClientLibrary() {
+  js.context.callMethod('gapi.load', ['client', (void Function() onLoad) {
+    print('Google API client loaded');
+  }]);
+}
