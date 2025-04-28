@@ -237,9 +237,9 @@ ${post.description ?? "No description available."}
     }
     final match = assignmentPattern.firstMatch(line.trim());
     if (match != null) {
-      final type = match.group(1)!; // "Task" or "Module"
-      final id = match.group(2)!;   // e.g., "2"
-      final usersRaw = match.group(3)!; // e.g., "Sabari, Santhosh"
+      final type = match.group(1)!; 
+      final id = match.group(2)!;
+      final usersRaw = match.group(3)!; 
 
       final key = "$type $id";
       final users = usersRaw.split(",").map((u) => u.trim()).toSet();
