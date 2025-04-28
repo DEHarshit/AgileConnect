@@ -19,7 +19,7 @@ class LoginScreen extends ConsumerWidget {
         child: Center(
           child: Column(
             children:  [
-            //welcome
+            // welcome
             const SizedBox(height:50 ),
             const Text(
               'Welcome',
