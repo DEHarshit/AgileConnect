@@ -143,7 +143,7 @@ class _AddPostScreenState extends ConsumerState<AddPostScreen> {
                     padding: const EdgeInsets.only(top: 16.0),
                     child: Column(
                       children: [
-                        Row(
+                        Row(//
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(

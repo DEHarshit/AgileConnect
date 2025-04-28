@@ -616,7 +616,7 @@ ${majorDecisions.join("\n")}
           child: Row(
             children: [
               const SizedBox(width: 5),
-              Expanded(
+              Expanded(//
                 child: SizedBox(
                   height: 35,
                   width: 50,

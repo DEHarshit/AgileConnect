@@ -137,7 +137,7 @@ class UserProfile extends ConsumerWidget {
                         return viewer?.uid == post.uid
                             ? post.title != post.description ? PostCard(post:post) : const SizedBox.shrink()
                             : const SizedBox.shrink();
-                      },
+                      },//
                     ),
                     error: (error, stackTrace) =>
                         ErrorText(error: error.toString()),

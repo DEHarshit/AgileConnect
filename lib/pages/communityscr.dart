@@ -242,10 +242,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     );
                   }
                   return ListView.builder(
-  padding: const EdgeInsets.only(top: 15),
-  itemCount: data.length,
-  itemBuilder: (BuildContext context, int index) {
-    final post = data[data.length - 1 - index];
+                    padding: const EdgeInsets.only(top: 15),
+                    itemCount: data.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final post = data[data.length - 1 - index];
 
                       
                       if (post.title == post.description) {
