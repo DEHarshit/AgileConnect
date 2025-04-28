@@ -11,7 +11,8 @@ import "package:resky/pages/comp/loader.dart";
 import 'package:intl/intl.dart';
 
 class AddPostScreen extends ConsumerStatefulWidget {
-  const AddPostScreen({super.key});
+  final String? name;
+  const AddPostScreen({super.key,this.name});
 
   @override
   ConsumerState<AddPostScreen> createState() => _AddPostScreenState();

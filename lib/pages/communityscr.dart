@@ -181,7 +181,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         child: Row(
           children: [
             OutlinedButton(
-              onPressed: () => {},
+              onPressed: () => navToSessions(context),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

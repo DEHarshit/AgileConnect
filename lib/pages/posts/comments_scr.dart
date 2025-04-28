@@ -38,18 +38,17 @@ void addComment(String postId) async {
         .group(1)!
         .split(RegExp(r"\s+"))
         .where((t) => t.isNotEmpty)
-        .map((t) => "Task $t") // Ensure format matches summary
+        .map((t) => "Task $t") 
         .toList();
 
     Map<String, Set<String>> prevTaskAllocations = {};
 
-    // Extract previous task assignments from the manual summary
     if (post.manualSummary != null) {
       for (var line in post.manualSummary!.split("\n")) {
         if (line.startsWith("-")) {
           var parts = line.split(":");
           if (parts.length == 2) {
-            String task = parts[0].substring(2).trim(); // e.g., "Task 3"
+            String task = parts[0].substring(2).trim(); 
             Set<String> assignedUsers =
                 parts[1].split(",").map((e) => e.trim()).toSet();
             prevTaskAllocations[task] = assignedUsers;
@@ -58,7 +57,6 @@ void addComment(String postId) async {
       }
     }
 
-    // Check for conflicts
     Map<String, List<String>> conflicts = {};
     for (String task in tasks) {
       if (prevTaskAllocations.containsKey(task)) {
@@ -66,7 +64,32 @@ void addComment(String postId) async {
       }
     }
 
-    // Handle conflicts
+    for (String task in tasks) {
+      if (!conflicts.containsKey(task)) {
+        bool? confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text("Module Assignment Confirmation"),
+            content: Text("Do you want to take responsibility for Module(s): ${task.split(' ').last}?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text("No"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text("Yes"),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) {
+          commentText += "¤";
+        }
+      }
+    }
+
     if (conflicts.isNotEmpty) {
       for (var entry in conflicts.entries) {
         String conflictingTask = entry.key;
@@ -94,9 +117,8 @@ void addComment(String postId) async {
         );
 
         if (response == "split") {
-          commentText = "$conflictingTask";
         } else {
-          commentText += "¤"; // Mark as ignored
+          commentText += "¤"; 
         }
       }
     }
@@ -178,35 +200,60 @@ ${post.description ?? "No description available."}
     Map<String, String> taskStatuses = {};
     Map<String, String> moduleStatuses = {};
     List<String> majorDecisions = [];
+    Map<String, String> prevTaskStatuses = {};
+    Map<String, String> prevModuleStatuses = {};
 
     RegExp taskPattern =
         RegExp(r"(?:task\s*((?:\d+\s*)+))", caseSensitive: false);
     RegExp modulePattern =
         RegExp(r"(?:module\s*((?:\d+\s*)+))", caseSensitive: false);
     RegExp statusPattern = RegExp(
-    r"(task|module)\s*(\d+)\s*(?:is|has been)?\s*(completed|done|over|on hold)",
+    r"(task|module)\s*(\d+)\s*(?:is|has been)?\s*(completed|done|over|on hold|tested)",
     caseSensitive: false);
+    final statusLinePattern = RegExp(r"^- (Task|Module)\s+(\d+):\s*(✅ Completed|🧪 Tested|⏳ On Hold|🟡 Pending)");
+
 
     Map<String, Set<String>> prevTaskToUsers = {};
     Map<String, Set<String>> prevModuleToUsers = {};
 
     if (post.prevManSummary != null) {
-      for (var line in post.prevManSummary!.split("\n")) {
-        if (line.startsWith("-")) {
-          var parts = line.split(":");
-          if (parts.length == 2) {
-            String item = parts[0].substring(2).trim();
-            Set<String> users =
-                parts[1].split(",").map((e) => e.trim()).toSet();
-            if (item.startsWith("Task")) {
-              prevTaskToUsers[item] = users;
-            } else if (item.startsWith("Module")) {
-              prevModuleToUsers[item] = users;
-            }
-          }
-        }
+  final assignmentPattern = RegExp(r"^- (Task|Module)\s+(\d+):\s*(.+)");
+
+  for (var line in post.prevManSummary!.split("\n")) {
+    final statusMatch = statusLinePattern.firstMatch(line.trim());
+    if (statusMatch != null) {
+      final type = statusMatch.group(1)!; 
+      final id = statusMatch.group(2)!;
+      final status = statusMatch.group(3)!;
+      final key = "$type $id";
+
+      if (type == "Task" && !prevTaskStatuses.containsKey(key)) {
+        prevTaskStatuses[key] = status;
+      } else if (type == "Module" && !prevModuleStatuses.containsKey(key)) {
+        prevModuleStatuses[key] = status;
+      }
+
+      continue;
+    }
+    final match = assignmentPattern.firstMatch(line.trim());
+    if (match != null) {
+      final type = match.group(1)!; // "Task" or "Module"
+      final id = match.group(2)!;   // e.g., "2"
+      final usersRaw = match.group(3)!; // e.g., "Sabari, Santhosh"
+
+      final key = "$type $id";
+      final users = usersRaw.split(",").map((u) => u.trim()).toSet();
+
+      if (type == "Task") {
+        prevTaskToUsers[key] = users;
+      } else {
+        prevModuleToUsers[key] = users;
       }
     }
+  }
+}
+    print("PREV TASK PARSE:");
+prevTaskToUsers.forEach((k, v) => print("$k → $v"));
 
     for (var comment in comments) {
       String user = comment.username;
@@ -219,9 +266,13 @@ ${post.description ?? "No description available."}
     String status = statusMatch.group(3)!.toLowerCase();
 
     String formattedStatus =
-        (status == "done" || status == "completed" || status == "over")
-            ? "✅ Completed"
-            : (status == "tested") ? "🧪 Tested" : "⏳ On Hold";
+    (status == "done" || status == "completed" || status == "over")
+        ? "✅ Completed"
+        : (status == "tested")
+            ? "🧪 Tested"
+            : (status == "on hold")
+                ? "⏳ On Hold"
+                : "🟡 Pending";
 
     if (type == "task") {
       taskStatuses["Task $id"] = formattedStatus;
@@ -230,33 +281,10 @@ ${post.description ?? "No description available."}
     }
     continue;
   }
-
-      Match? taskMatch = taskPattern.firstMatch(text);
-      if (taskMatch != null && !text.endsWith("¤")) {
-        Set<String> tasks = taskMatch
-            .group(1)!
-            .split(RegExp(r"\s+"))
-            .where((t) => t.isNotEmpty)
-            .map((t) => "Task $t")
-            .toSet();
-
-        for (String task in tasks) {
-    prevTaskToUsers.forEach((prevTask, users) {
-        if (users.contains(user) && prevTask != task) {
-            prevTaskToUsers[prevTask]!.remove(user);
-        }
-    });
-
-    taskToUsers.putIfAbsent(task, () => {}).add(user);
-    taskComments
-        .putIfAbsent(task, () => [])
-        .add("- $user says \"$text\"");
-}
-      }
-
-      if (user == post.username) {
+ 
+    if (user == post.username) {
         RegExp leaderAssignPattern = RegExp(
-          r"(\w+)\s+will\s+be\s+doing\s+Task\s+(\d+)",
+          r"(\w+)\s+will\s+be\s+assigned\s+to\s+Task\s+(\d+)",
           caseSensitive: false,
         );
         Match? leaderMatch = leaderAssignPattern.firstMatch(text);
@@ -267,8 +295,34 @@ ${post.description ?? "No description available."}
 
           prevTaskToUsers.removeWhere((key, value) => value.contains(assignedMember));
           taskToUsers.putIfAbsent(assignedTask, () => {}).add(assignedMember);
+          continue;
         }
       }
+
+
+      Match? taskMatch = taskPattern.firstMatch(text);
+      if (taskMatch != null && !text.endsWith("¤")) {
+        RegExp leaderAssignPattern = RegExp(
+          r"(\w+)\s+Task\s+(\d+)",
+          caseSensitive: false,
+        );
+        Set<String> tasks = taskMatch
+            .group(1)!
+            .split(RegExp(r"\s+"))
+            .where((t) => t.isNotEmpty)
+            .map((t) => "Task $t")
+            .toSet();
+
+        for (String task in tasks) {
+
+    taskToUsers.putIfAbsent(task, () => {}).add(user);
+    taskComments
+        .putIfAbsent(task, () => [])
+        .add("- $user says \"$text\"");
+}
+      }
+
+      
 
       Match? moduleMatch = modulePattern.firstMatch(text);
       if (moduleMatch != null && !text.endsWith("¤")) {
@@ -295,37 +349,45 @@ ${post.description ?? "No description available."}
             '''- $user says "${comment.text}" (${comment.upvotes.length} votes)\n''');
       }
     }
-
+   final mergedTaskStatuses = {...prevTaskStatuses, ...taskStatuses};
+final mergedModuleStatuses = {...prevModuleStatuses, ...moduleStatuses};
     List<String> summarySections = [postSummary];
 
-    if (prevTaskToUsers.isNotEmpty || taskStatuses.isNotEmpty) {
+    if (prevTaskToUsers.isNotEmpty || mergedTaskStatuses.isNotEmpty) {
   summarySections.add("""
 📌 Task Status:
 
-${prevTaskToUsers.keys.map((task) => "- $task: ${taskStatuses[task] ?? "🟡 Pending"}").join("\n")}
+${prevTaskToUsers.keys.map((task) => "- $task: ${mergedTaskStatuses[task] ?? "🟡 Pending"}").join("\n")}
 """);
 }
 
-// Add Module Status section if any module statuses exist
-if (prevModuleToUsers.isNotEmpty || moduleStatuses.isNotEmpty) {
+if (prevModuleToUsers.isNotEmpty || mergedModuleStatuses.isNotEmpty) {
   summarySections.add("""
 📌 Module Status:
 
-${prevModuleToUsers.keys.map((module) => "- $module: ${moduleStatuses[module] ?? "🟡 Pending"}").join("\n")}
+${prevModuleToUsers.keys.map((module) => "- $module: ${mergedModuleStatuses[module] ?? "🟡 Pending"}").join("\n")}
 """);
 }
 
-    if (taskToUsers.isNotEmpty || prevTaskToUsers.isNotEmpty) {
-      summarySections.add("""
+    // Merge task assignments properly
+Map<String, Set<String>> combinedTaskAssignments = {};
+
+for (var entry in prevTaskToUsers.entries) {
+  combinedTaskAssignments[entry.key] = {...entry.value};
+}
+for (var entry in taskToUsers.entries) {
+  combinedTaskAssignments.update(
+    entry.key,
+    (existing) => existing..addAll(entry.value),
+    ifAbsent: () => {...entry.value},
+  );
+}
+
+summarySections.add("""
 📌 Task Assignments:
 
-${[
-        ...prevTaskToUsers.entries,
-        ...taskToUsers.entries
-      ].map((entry) => "- ${entry.key}: ${entry.value.join(", ")}").join("\n")}
+${combinedTaskAssignments.entries.map((entry) => "- ${entry.key}: ${entry.value.join(", ")}").join("\n")}
 """);
-    }
-
     if (moduleToUsers.isNotEmpty || prevModuleToUsers.isNotEmpty) {
       summarySections.add("""
 📌 Module Assignments:

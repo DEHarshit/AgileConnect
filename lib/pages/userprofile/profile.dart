@@ -135,10 +135,8 @@ class UserProfile extends ConsumerWidget {
                       itemBuilder: (context, index) {
                         final post = data[index];
                         return viewer?.uid == post.uid
-                            ? PostCard(post: post)
-                            : post.isAnonymous
-                                ? const SizedBox.shrink()
-                                : PostCard(post: post);
+                            ? post.title != post.description ? PostCard(post:post) : const SizedBox.shrink()
+                            : const SizedBox.shrink();
                       },
                     ),
                     error: (error, stackTrace) =>

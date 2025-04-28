@@ -9,6 +9,7 @@ import 'package:resky/pages/edit_comm.dart';
 import 'package:resky/pages/home.dart';
 import 'package:resky/pages/login.dart';
 import 'package:resky/pages/posts/add_posts_type.dart';
+import 'package:resky/pages/posts/add_posts.dart';
 import 'package:resky/pages/posts/comments_scr.dart';
 import 'package:resky/pages/posts/add_comments.dart';
 import 'package:resky/pages/tools.dart';
@@ -38,6 +39,10 @@ final loggedInRoute = RouteMap(routes: {
       )),
   '/:name/add-mods': (routeData) => MaterialPage(
           child: AddModsScreen(
+        name: routeData.pathParameters['name']!,
+      )),
+  '/:name/add-posts': (routeData) => MaterialPage(
+          child: AddPostScreen(
         name: routeData.pathParameters['name']!,
       )),
   '/:name/report-screen': (routeData) => MaterialPage(
